@@ -1,0 +1,566 @@
+{% extends "base.html" %}
+
+{% block title %}仪表板 - AI Trading Robot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- 页面标题 -->
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-tachometer-alt me-2"></i>
+                交易仪表板
+            </h2>
+            <div>
+                <button class="btn btn-outline-primary btn-custom me-2" onclick="refreshDashboard()">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    刷新
+                </button>
+                <button class="btn btn-primary btn-custom" onclick="exportReport()">
+                    <i class="fas fa-file-export me-1"></i>
+                    导出报告
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 关键指标卡片 -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-value" id="total-portfolio-value">$0.00</div>
+                    <div class="metric-label">投资组合总值</div>
+                </div>
+                <div>
+                    <i class="fas fa-wallet" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="metric-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-value" id="total-return">+0.00%</div>
+                    <div class="metric-label">总收益率</div>
+                </div>
+                <div>
+                    <i class="fas fa-chart-line" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="metric-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-value" id="active-positions">0</div>
+                    <div class="metric-label">活跃持仓</div>
+                </div>
+                <div>
+                    <i class="fas fa-briefcase" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="metric-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-value" id="daily-pnl">$0.00</div>
+                    <div class="metric-label">今日盈亏</div>
+                </div>
+                <div>
+                    <i class="fas fa-calendar-day" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 收益图表 -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-area me-2"></i>
+                        投资组合收益趋势
+                    </h5>
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="timeRange" id="range1d" value="1d" checked>
+                        <label class="btn btn-outline-primary btn-sm" for="range1d">1天</label>
+                        
+                        <input type="radio" class="btn-check" name="timeRange" id="range1w" value="1w">
+                        <label class="btn btn-outline-primary btn-sm" for="range1w">1周</label>
+                        
+                        <input type="radio" class="btn-check" name="timeRange" id="range1m" value="1m">
+                        <label class="btn btn-outline-primary btn-sm" for="range1m">1月</label>
+                        
+                        <input type="radio" class="btn-check" name="timeRange" id="range3m" value="3m">
+                        <label class="btn btn-outline-primary btn-sm" for="range3m">3月</label>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="portfolioChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AI模型表现 -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-robot me-2"></i>
+                    AI模型表现
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="modelsChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 持仓分布 -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-pie-chart me-2"></i>
+                    持仓分布
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="positions-container">
+                    <div class="text-center py-4">
+                        <div class="loading-spinner"></div>
+                        <p class="mt-2 text-muted">加载持仓数据...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 最近交易 -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        最近交易
+                    </h5>
+                    <a href="/trades" class="btn btn-outline-primary btn-sm">
+                        查看全部
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="recent-trades-container">
+                    <div class="text-center py-4">
+                        <div class="loading-spinner"></div>
+                        <p class="mt-2 text-muted">加载交易记录...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 市场热图 -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-th me-2"></i>
+                    市场热图
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="market-heatmap" style="height: 400px;">
+                    <div class="text-center py-5">
+                        <div class="loading-spinner"></div>
+                        <p class="mt-2 text-muted">加载市场热图...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 图表实例
+    let portfolioChart = null;
+    let modelsChart = null;
+    
+    // 初始化投资组合图表
+    function initPortfolioChart() {
+        const ctx = document.getElementById('portfolioChart').getContext('2d');
+        
+        portfolioChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: '投资组合价值',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: 3,
+                        hoverRadius: 6
+                    }
+                }
+            }
+        });
+    }
+    
+    // 初始化模型表现图表
+    function initModelsChart() {
+        const ctx = document.getElementById('modelsChart').getContext('2d');
+        
+        modelsChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#FF6384',
+                        '#36A2EB',
+                        '#FFCE56',
+                        '#4BC0C0',
+                        '#9966FF',
+                        '#FF9F40'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // 加载仪表板数据
+    async function loadDashboardData() {
+        try {
+            // 并行加载多个数据源
+            const [performanceData, positionsData, tradesData, marketData] = await Promise.all([
+                apiRequest('/api/performance'),
+                apiRequest('/api/portfolio/all'),
+                apiRequest('/api/trades?limit=10'),
+                apiRequest('/api/market-data?symbols=AAPL,MSFT,GOOGL,AMZN,TSLA')
+            ]);
+            
+            // 更新关键指标
+            updateKeyMetrics(performanceData);
+            
+            // 更新持仓分布
+            updatePositions(positionsData);
+            
+            // 更新最近交易
+            updateRecentTrades(tradesData);
+            
+            // 更新市场热图
+            updateMarketHeatmap(marketData);
+            
+            // 更新图表数据
+            updateCharts(performanceData);
+            
+        } catch (error) {
+            console.error('加载仪表板数据失败:', error);
+        }
+    }
+    
+    // 更新关键指标
+    function updateKeyMetrics(data) {
+        document.getElementById('total-portfolio-value').textContent = formatCurrency(data.total_value || 10000);
+        
+        const totalReturn = data.average_return || 0;
+        const returnElement = document.getElementById('total-return');
+        returnElement.textContent = formatPercentage(totalReturn);
+        returnElement.className = `metric-value ${totalReturn >= 0 ? 'text-success' : 'text-danger'}`;
+        
+        document.getElementById('active-positions').textContent = data.active_positions || 0;
+        
+        const dailyPnl = data.daily_pnl || 0;
+        const pnlElement = document.getElementById('daily-pnl');
+        pnlElement.textContent = formatCurrency(dailyPnl);
+        pnlElement.className = `metric-value ${dailyPnl >= 0 ? 'text-success' : 'text-danger'}`;
+    }
+    
+    // 更新持仓分布
+    function updatePositions(positions) {
+        const container = document.getElementById('positions-container');
+        
+        if (!positions || positions.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-info-circle text-muted"></i>
+                    <p class="mt-2 text-muted">暂无持仓数据</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        positions.slice(0, 8).forEach(position => {
+            const pnlClass = position.unrealized_pnl >= 0 ? 'text-success' : 'text-danger';
+            const pnlIcon = position.unrealized_pnl >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+            
+            html += `
+                <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
+                    <div>
+                        <h6 class="mb-1">${position.symbol}</h6>
+                        <small class="text-muted">${position.quantity} 股</small>
+                    </div>
+                    <div class="text-end">
+                        <div><strong>${formatCurrency(position.market_value)}</strong></div>
+                        <div class="small ${pnlClass}">
+                            <i class="fas ${pnlIcon}"></i>
+                            ${formatCurrency(position.unrealized_pnl)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    // 更新最近交易
+    function updateRecentTrades(trades) {
+        const container = document.getElementById('recent-trades-container');
+        
+        if (!trades || trades.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-info-circle text-muted"></i>
+                    <p class="mt-2 text-muted">暂无交易记录</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        trades.slice(0, 5).forEach(trade => {
+            const actionClass = trade.action === 'buy' ? 'text-success' : 'text-danger';
+            const actionIcon = trade.action === 'buy' ? 'fa-plus' : 'fa-minus';
+            const actionText = trade.action === 'buy' ? '买入' : '卖出';
+            
+            const tradeTime = new Date(trade.timestamp).toLocaleString('zh-CN', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            html += `
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 border-bottom">
+                    <div>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-primary me-2">${trade.symbol}</span>
+                            <span class="${actionClass}">
+                                <i class="fas ${actionIcon} me-1"></i>
+                                ${actionText}
+                            </span>
+                        </div>
+                        <small class="text-muted">${tradeTime}</small>
+                    </div>
+                    <div class="text-end">
+                        <div><strong>${trade.quantity} 股</strong></div>
+                        <div class="small text-muted">@${formatCurrency(trade.price)}</div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    // 更新市场热图
+    function updateMarketHeatmap(marketData) {
+        const container = document.getElementById('market-heatmap');
+        
+        if (!marketData || Object.keys(marketData).length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-info-circle text-muted"></i>
+                    <p class="mt-2 text-muted">暂无市场数据</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '<div class="row g-2">';
+        
+        Object.entries(marketData).forEach(([symbol, data]) => {
+            const changePercent = data.change_percent || 0;
+            let bgColor, textColor;
+            
+            if (changePercent > 2) {
+                bgColor = 'bg-success';
+                textColor = 'text-white';
+            } else if (changePercent > 0) {
+                bgColor = 'bg-success';
+                textColor = 'text-white';
+                bgColor = bgColor.replace('success', 'success bg-opacity-75');
+            } else if (changePercent < -2) {
+                bgColor = 'bg-danger';
+                textColor = 'text-white';
+            } else if (changePercent < 0) {
+                bgColor = 'bg-danger';
+                textColor = 'text-white';
+                bgColor = bgColor.replace('danger', 'danger bg-opacity-75');
+            } else {
+                bgColor = 'bg-secondary';
+                textColor = 'text-white';
+            }
+            
+            html += `
+                <div class="col-md-2 col-sm-4 col-6">
+                    <div class="card ${bgColor} ${textColor} h-100">
+                        <div class="card-body text-center p-3">
+                            <h6 class="card-title mb-1">${symbol}</h6>
+                            <div class="h5 mb-1">${formatCurrency(data.price)}</div>
+                            <small>${changePercent.toFixed(2)}%</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+    }
+    
+    // 更新图表
+    function updateCharts(data) {
+        // 更新投资组合图表（模拟数据）
+        const portfolioLabels = [];
+        const portfolioData = [];
+        const baseValue = 10000;
+        
+        for (let i = 29; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            portfolioLabels.push(date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }));
+            
+            // 模拟数据：基于总收益率生成趋势
+            const totalReturn = data.average_return || 0;
+            const dailyReturn = totalReturn / 30; // 平均每日收益
+            const randomFactor = (Math.random() - 0.5) * 0.02; // ±1%的随机波动
+            const value = baseValue * (1 + (dailyReturn + randomFactor) * (30 - i));
+            portfolioData.push(Math.round(value));
+        }
+        
+        portfolioChart.data.labels = portfolioLabels;
+        portfolioChart.data.datasets[0].data = portfolioData;
+        portfolioChart.update();
+        
+        // 更新模型表现图表
+        if (data.rankings && data.rankings.length > 0) {
+            const modelLabels = data.rankings.map(r => r.model_name);
+            const modelReturns = data.rankings.map(r => Math.abs(r.total_return));
+            
+            modelsChart.data.labels = modelLabels;
+            modelsChart.data.datasets[0].data = modelReturns;
+            modelsChart.update();
+        }
+    }
+    
+    // 刷新仪表板
+    function refreshDashboard() {
+        loadDashboardData();
+    }
+    
+    // 导出报告
+    function exportReport() {
+        alert('导出报告功能开发中...');
+    }
+    
+    // 时间范围切换
+    document.addEventListener('change', function(e) {
+        if (e.target.name === 'timeRange') {
+            console.log('切换时间范围:', e.target.value);
+            // 这里可以根据时间范围重新加载数据
+        }
+    });
+    
+    // WebSocket实时更新
+    socket.on('live_update', function(data) {
+        console.log('仪表板收到实时更新:', data);
+        
+        // 可以实现增量更新，避免重新加载所有数据
+        if (data.portfolio_update) {
+            // 更新投资组合数据
+        }
+        
+        if (data.trade_update) {
+            // 更新交易数据
+        }
+    });
+    
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化图表
+        initPortfolioChart();
+        initModelsChart();
+        
+        // 加载数据
+        loadDashboardData();
+        
+        // 定期刷新数据
+        setInterval(loadDashboardData, 30000); // 每30秒刷新一次
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,572 @@
+{% extends "base.html" %}
+
+{% block title %}交易记录 - AI Trading Robot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- 页面标题 -->
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-exchange-alt me-2"></i>
+                交易记录
+            </h2>
+            <div>
+                <button class="btn btn-outline-primary btn-custom me-2" onclick="refreshTrades()">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    刷新
+                </button>
+                <button class="btn btn-outline-success btn-custom me-2" onclick="exportTrades()">
+                    <i class="fas fa-download me-1"></i>
+                    导出
+                </button>
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="timeRange" id="today" value="today" checked>
+                    <label class="btn btn-outline-secondary btn-sm" for="today">今日</label>
+                    
+                    <input type="radio" class="btn-check" name="timeRange" id="week" value="week">
+                    <label class="btn btn-outline-secondary btn-sm" for="week">本周</label>
+                    
+                    <input type="radio" class="btn-check" name="timeRange" id="month" value="month">
+                    <label class="btn btn-outline-secondary btn-sm" for="month">本月</label>
+                    
+                    <input type="radio" class="btn-check" name="timeRange" id="all" value="all">
+                    <label class="btn btn-outline-secondary btn-sm" for="all">全部</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 交易统计卡片 -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-value" id="total-trades">0</div>
+                    <div class="metric-label">总交易数</div>
+                </div>
+                <div>
+                    <i class="fas fa-chart-line" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="metric-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-value" id="profitable-trades">0</div>
+                    <div class="metric-label">盈利交易</div>
+                </div>
+                <div>
+                    <i class="fas fa-arrow-up" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="metric-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-value" id="total-pnl">$0.00</div>
+                    <div class="metric-label">总盈亏</div>
+                </div>
+                <div>
+                    <i class="fas fa-dollar-sign" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="metric-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-value" id="win-rate">0%</div>
+                    <div class="metric-label">胜率</div>
+                </div>
+                <div>
+                    <i class="fas fa-percentage" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 交易列表 -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        交易列表
+                    </h5>
+                    <div class="input-group" style="width: 300px;">
+                        <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="搜索股票代码或AI模型...">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" onclick="searchTrades()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="trades-list-container">
+                    <div class="text-center py-4">
+                        <div class="loading-spinner"></div>
+                        <p class="mt-2 text-muted">加载交易数据...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 交易分析 -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    交易分析
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="tradesChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 交易详情 -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        交易详情
+                    </h5>
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="detailView" id="listView" value="list" checked>
+                        <label class="btn btn-outline-primary btn-sm" for="listView">
+                            <i class="fas fa-list"></i> 列表
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="detailView" id="cardView" value="card">
+                        <label class="btn btn-outline-primary btn-sm" for="cardView">
+                            <i class="fas fa-th-large"></i> 卡片
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="trades-detail-container">
+                    <div class="text-center py-4">
+                        <div class="loading-spinner"></div>
+                        <p class="mt-2 text-muted">加载交易详情...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 交易详情模态框 -->
+<div class="modal fade" id="tradeDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle me-2"></i>
+                    交易详情
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="tradeDetailContent">
+                <!-- 交易详情内容将在这里动态加载 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 交易分析图表实例
+    let tradesChart = null;
+    
+    // 初始化交易分析图表
+    function initTradesChart() {
+        const ctx = document.getElementById('tradesChart').getContext('2d');
+        
+        tradesChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['盈利交易', '亏损交易'],
+                datasets: [{
+                    data: [0, 0],
+                    backgroundColor: ['#28a745', '#dc3545'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // 加载交易数据
+    async function loadTradesData() {
+        try {
+            const timeRange = document.querySelector('input[name="timeRange"]:checked').value;
+            const tradesData = await apiRequest(`/api/trades?range=${timeRange}`);
+            
+            // 更新统计指标
+            updateTradeMetrics(tradesData);
+            
+            // 更新交易列表
+            updateTradesList(tradesData);
+            
+            // 更新交易详情
+            updateTradesDetail(tradesData);
+            
+            // 更新分析图表
+            updateTradesChart(tradesData);
+            
+        } catch (error) {
+            console.error('加载交易数据失败:', error);
+            showError('trades-list-container', '加载交易数据失败');
+        }
+    }
+    
+    // 更新交易统计指标
+    function updateTradeMetrics(trades) {
+        const totalTrades = trades.length;
+        const profitableTrades = trades.filter(t => t.pnl > 0).length;
+        const totalPnl = trades.reduce((sum, t) => sum + t.pnl, 0);
+        const winRate = totalTrades > 0 ? (profitableTrades / totalTrades * 100) : 0;
+        
+        document.getElementById('total-trades').textContent = totalTrades;
+        document.getElementById('profitable-trades').textContent = profitableTrades;
+        document.getElementById('total-pnl').textContent = formatCurrency(totalPnl);
+        document.getElementById('win-rate').textContent = formatPercentage(winRate / 100);
+    }
+    
+    // 更新交易列表
+    function updateTradesList(trades) {
+        const container = document.getElementById('trades-list-container');
+        
+        if (!trades || trades.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-info-circle text-muted"></i>
+                    <p class="mt-2 text-muted">暂无交易记录</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '<div class="table-responsive">';
+        html += '<table class="table table-hover table-custom">';
+        html += `
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>股票</th>
+                    <th>类型</th>
+                    <th>数量</th>
+                    <th>价格</th>
+                    <th>盈亏</th>
+                    <th>AI模型</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        trades.forEach(trade => {
+            const pnlClass = trade.pnl >= 0 ? 'text-success' : 'text-danger';
+            const typeClass = trade.type === 'BUY' ? 'text-success' : 'text-danger';
+            const typeBadge = trade.type === 'BUY' ? 
+                '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>买入</span>' : 
+                '<span class="badge bg-danger"><i class="fas fa-arrow-down me-1"></i>卖出</span>';
+            
+            html += `
+                <tr>
+                    <td><small>${formatDateTime(trade.timestamp)}</small></td>
+                    <td><strong>${trade.symbol}</strong></td>
+                    <td>${typeBadge}</td>
+                    <td>${trade.quantity}</td>
+                    <td>${formatCurrency(trade.price)}</td>
+                    <td class="${pnlClass}"><strong>${formatCurrency(trade.pnl)}</strong></td>
+                    <td><span class="badge bg-info">${trade.ai_model}</span></td>
+                    <td>
+                        <button class="btn btn-outline-info btn-sm" onclick="viewTradeDetail('${trade.id}')" title="详情">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+    }
+    
+    // 更新交易详情
+    function updateTradesDetail(trades) {
+        const container = document.getElementById('trades-detail-container');
+        const viewMode = document.querySelector('input[name="detailView"]:checked').value;
+        
+        if (!trades || trades.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-info-circle text-muted"></i>
+                    <p class="mt-2 text-muted">暂无交易详情</p>
+                </div>
+            `;
+            return;
+        }
+        
+        if (viewMode === 'card') {
+            updateTradesCardView(trades, container);
+        } else {
+            updateTradesListView(trades, container);
+        }
+    }
+    
+    // 卡片视图
+    function updateTradesCardView(trades, container) {
+        let html = '<div class="row">';
+        
+        trades.slice(0, 12).forEach(trade => {
+            const pnlClass = trade.pnl >= 0 ? 'text-success' : 'text-danger';
+            const typeClass = trade.type === 'BUY' ? 'border-success' : 'border-danger';
+            
+            html += `
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 ${typeClass}" style="border-width: 2px;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h6 class="card-title mb-0">
+                                    <i class="fas fa-chart-line me-2"></i>
+                                    ${trade.symbol}
+                                </h6>
+                                <span class="badge ${trade.type === 'BUY' ? 'bg-success' : 'bg-danger'}">
+                                    ${trade.type === 'BUY' ? '买入' : '卖出'}
+                                </span>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <small class="text-muted">盈亏</small>
+                                <div class="h5 ${pnlClass} mb-0">${formatCurrency(trade.pnl)}</div>
+                            </div>
+                            
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="small text-muted">数量</div>
+                                    <div class="fw-bold">${trade.quantity}</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="small text-muted">价格</div>
+                                    <div class="fw-bold">${formatCurrency(trade.price)}</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="small text-muted">模型</div>
+                                    <div class="fw-bold small">${trade.ai_model}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <small class="text-muted">${formatDateTime(trade.timestamp)}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+    }
+    
+    // 列表视图
+    function updateTradesListView(trades, container) {
+        let html = '<div class="table-responsive">';
+        html += '<table class="table table-striped table-hover">';
+        html += `
+            <thead class="table-dark">
+                <tr>
+                    <th>时间</th>
+                    <th>股票代码</th>
+                    <th>交易类型</th>
+                    <th>数量</th>
+                    <th>价格</th>
+                    <th>总金额</th>
+                    <th>盈亏</th>
+                    <th>AI模型</th>
+                    <th>状态</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        trades.forEach(trade => {
+            const pnlClass = trade.pnl >= 0 ? 'text-success' : 'text-danger';
+            const totalAmount = trade.quantity * trade.price;
+            
+            html += `
+                <tr onclick="viewTradeDetail('${trade.id}')" style="cursor: pointer;">
+                    <td><small>${formatDateTime(trade.timestamp)}</small></td>
+                    <td><strong>${trade.symbol}</strong></td>
+                    <td>
+                        <span class="badge ${trade.type === 'BUY' ? 'bg-success' : 'bg-danger'}">
+                            ${trade.type === 'BUY' ? '买入' : '卖出'}
+                        </span>
+                    </td>
+                    <td>${trade.quantity}</td>
+                    <td>${formatCurrency(trade.price)}</td>
+                    <td>${formatCurrency(totalAmount)}</td>
+                    <td class="${pnlClass}"><strong>${formatCurrency(trade.pnl)}</strong></td>
+                    <td><span class="badge bg-info">${trade.ai_model}</span></td>
+                    <td><span class="badge bg-success">已完成</span></td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+    }
+    
+    // 更新交易分析图表
+    function updateTradesChart(trades) {
+        if (!trades || trades.length === 0) {
+            return;
+        }
+        
+        const profitableTrades = trades.filter(t => t.pnl > 0).length;
+        const losingTrades = trades.filter(t => t.pnl < 0).length;
+        
+        tradesChart.data.datasets[0].data = [profitableTrades, losingTrades];
+        tradesChart.update();
+    }
+    
+    // 刷新交易数据
+    function refreshTrades() {
+        loadTradesData();
+    }
+    
+    // 导出交易数据
+    function exportTrades() {
+        alert('导出交易数据功能开发中...');
+    }
+    
+    // 搜索交易
+    function searchTrades() {
+        const searchTerm = document.getElementById('searchInput').value;
+        console.log('搜索交易:', searchTerm);
+        // 实现搜索逻辑
+    }
+    
+    // 查看交易详情
+    function viewTradeDetail(tradeId) {
+        // 模拟交易详情数据
+        const tradeDetail = {
+            id: tradeId,
+            symbol: 'AAPL',
+            type: 'BUY',
+            quantity: 100,
+            price: 150.25,
+            pnl: 250.50,
+            ai_model: 'GPT-4-Trader',
+            timestamp: new Date().toISOString(),
+            reason: 'AI模型分析显示该股票具有良好的上涨潜力',
+            confidence: 0.85
+        };
+        
+        const content = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>基本信息</h6>
+                    <table class="table table-sm">
+                        <tr><td>交易ID:</td><td>${tradeDetail.id}</td></tr>
+                        <tr><td>股票代码:</td><td><strong>${tradeDetail.symbol}</strong></td></tr>
+                        <tr><td>交易类型:</td><td><span class="badge ${tradeDetail.type === 'BUY' ? 'bg-success' : 'bg-danger'}">${tradeDetail.type === 'BUY' ? '买入' : '卖出'}</span></td></tr>
+                        <tr><td>数量:</td><td>${tradeDetail.quantity}</td></tr>
+                        <tr><td>价格:</td><td>${formatCurrency(tradeDetail.price)}</td></tr>
+                        <tr><td>总金额:</td><td>${formatCurrency(tradeDetail.quantity * tradeDetail.price)}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>交易结果</h6>
+                    <table class="table table-sm">
+                        <tr><td>盈亏:</td><td class="${tradeDetail.pnl >= 0 ? 'text-success' : 'text-danger'}"><strong>${formatCurrency(tradeDetail.pnl)}</strong></td></tr>
+                        <tr><td>AI模型:</td><td><span class="badge bg-info">${tradeDetail.ai_model}</span></td></tr>
+                        <tr><td>置信度:</td><td>${formatPercentage(tradeDetail.confidence)}</td></tr>
+                        <tr><td>交易时间:</td><td>${formatDateTime(tradeDetail.timestamp)}</td></tr>
+                    </table>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6>交易原因</h6>
+                    <p class="text-muted">${tradeDetail.reason}</p>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('tradeDetailContent').innerHTML = content;
+        const modal = new bootstrap.Modal(document.getElementById('tradeDetailModal'));
+        modal.show();
+    }
+    
+    // 时间范围切换
+    document.addEventListener('change', function(e) {
+        if (e.target.name === 'timeRange' || e.target.name === 'detailView') {
+            loadTradesData();
+        }
+    });
+    
+    // WebSocket实时更新
+    socket.on('live_update', function(data) {
+        console.log('交易页面收到实时更新:', data);
+        
+        if (data.new_trade) {
+            // 有新交易时刷新数据
+            loadTradesData();
+        }
+    });
+    
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化图表
+        initTradesChart();
+        
+        // 加载数据
+        loadTradesData();
+        
+        // 定期刷新数据
+        setInterval(loadTradesData, 30000); // 每30秒刷新一次
+    });
+</script>
+{% endblock %}

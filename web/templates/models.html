@@ -1,0 +1,607 @@
+{% extends "base.html" %}
+
+{% block title %}AI模型管理 - AI Trading Robot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- 页面标题 -->
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-brain me-2"></i>
+                AI模型管理
+            </h2>
+            <div>
+                <button class="btn btn-outline-primary btn-custom me-2" onclick="refreshModels()">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    刷新
+                </button>
+                <button class="btn btn-success btn-custom" onclick="addModel()">
+                    <i class="fas fa-plus me-1"></i>
+                    添加模型
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 模型概览卡片 -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-value" id="total-models">0</div>
+                    <div class="metric-label">总模型数</div>
+                </div>
+                <div>
+                    <i class="fas fa-robot" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="metric-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-value" id="active-models">0</div>
+                    <div class="metric-label">活跃模型</div>
+                </div>
+                <div>
+                    <i class="fas fa-play-circle" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="metric-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-value" id="best-performer">-</div>
+                    <div class="metric-label">最佳表现</div>
+                </div>
+                <div>
+                    <i class="fas fa-trophy" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="metric-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="metric-value" id="total-trades">0</div>
+                    <div class="metric-label">总交易次数</div>
+                </div>
+                <div>
+                    <i class="fas fa-exchange-alt" style="font-size: 2rem; opacity: 0.7;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 模型列表 -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    AI模型列表
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="models-list-container">
+                    <div class="text-center py-4">
+                        <div class="loading-spinner"></div>
+                        <p class="mt-2 text-muted">加载AI模型数据...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 模型性能对比 -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    性能对比
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="performanceChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 模型详细信息 -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        模型详细信息
+                    </h5>
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="viewMode" id="cardView" value="card" checked>
+                        <label class="btn btn-outline-primary btn-sm" for="cardView">
+                            <i class="fas fa-th-large"></i> 卡片
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="viewMode" id="tableView" value="table">
+                        <label class="btn btn-outline-primary btn-sm" for="tableView">
+                            <i class="fas fa-table"></i> 表格
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="models-detail-container">
+                    <div class="text-center py-4">
+                        <div class="loading-spinner"></div>
+                        <p class="mt-2 text-muted">加载模型详细信息...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 模型配置模态框 -->
+<div class="modal fade" id="modelConfigModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-cog me-2"></i>
+                    模型配置
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="modelConfigForm">
+                    <div class="mb-3">
+                        <label for="modelName" class="form-label">模型名称</label>
+                        <input type="text" class="form-control" id="modelName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modelType" class="form-label">模型类型</label>
+                        <input type="text" class="form-control" id="modelType" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="apiKey" class="form-label">API密钥</label>
+                        <input type="password" class="form-control" id="apiKey" placeholder="输入API密钥">
+                    </div>
+                    <div class="mb-3">
+                        <label for="maxTokens" class="form-label">最大Token数</label>
+                        <input type="number" class="form-control" id="maxTokens" value="2000">
+                    </div>
+                    <div class="mb-3">
+                        <label for="temperature" class="form-label">温度参数</label>
+                        <input type="number" class="form-control" id="temperature" value="0.1" step="0.1" min="0" max="2">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="modelEnabled">
+                            <label class="form-check-label" for="modelEnabled">
+                                启用此模型
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveModelConfig()">保存配置</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 性能图表实例
+    let performanceChart = null;
+    
+    // 初始化性能图表
+    function initPerformanceChart() {
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        
+        performanceChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#FF6384',
+                        '#36A2EB',
+                        '#FFCE56',
+                        '#4BC0C0',
+                        '#9966FF',
+                        '#FF9F40'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // 加载模型数据
+    async function loadModelsData() {
+        try {
+            const [modelsData, rankingsData] = await Promise.all([
+                apiRequest('/api/models'),
+                apiRequest('/api/rankings')
+            ]);
+            
+            // 更新概览指标
+            updateOverviewMetrics(modelsData, rankingsData);
+            
+            // 更新模型列表
+            updateModelsList(modelsData);
+            
+            // 更新模型详细信息
+            updateModelsDetail(modelsData);
+            
+            // 更新性能图表
+            updatePerformanceChart(rankingsData);
+            
+        } catch (error) {
+            console.error('加载模型数据失败:', error);
+            showError('models-list-container', '加载模型数据失败');
+        }
+    }
+    
+    // 更新概览指标
+    function updateOverviewMetrics(modelsData, rankingsData) {
+        document.getElementById('total-models').textContent = modelsData.length;
+        
+        const activeModels = modelsData.filter(m => m.is_active).length;
+        document.getElementById('active-models').textContent = activeModels;
+        
+        const totalTrades = modelsData.reduce((sum, m) => sum + (m.performance?.total_trades || 0), 0);
+        document.getElementById('total-trades').textContent = totalTrades;
+        
+        if (rankingsData.length > 0) {
+            const bestPerformer = rankingsData[0];
+            document.getElementById('best-performer').textContent = bestPerformer.model_name;
+        }
+    }
+    
+    // 更新模型列表
+    function updateModelsList(models) {
+        const container = document.getElementById('models-list-container');
+        
+        if (!models || models.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-info-circle text-muted"></i>
+                    <p class="mt-2 text-muted">暂无AI模型数据</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '<div class="table-responsive">';
+        html += '<table class="table table-hover table-custom">';
+        html += `
+            <thead>
+                <tr>
+                    <th>模型名称</th>
+                    <th>状态</th>
+                    <th>总收益</th>
+                    <th>胜率</th>
+                    <th>交易次数</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        models.forEach(model => {
+            const statusBadge = model.is_active ? 
+                '<span class="badge bg-success"><i class="fas fa-play me-1"></i>活跃</span>' : 
+                '<span class="badge bg-secondary"><i class="fas fa-pause me-1"></i>停用</span>';
+            
+            const performance = model.performance || {};
+            const totalReturn = performance.total_return || 0;
+            const returnClass = totalReturn >= 0 ? 'text-success' : 'text-danger';
+            const winRate = performance.win_rate || 0;
+            const totalTrades = performance.total_trades || 0;
+            
+            html += `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-robot me-2 text-primary"></i>
+                            <strong>${model.name}</strong>
+                        </div>
+                    </td>
+                    <td>${statusBadge}</td>
+                    <td class="${returnClass}"><strong>${formatCurrency(totalReturn)}</strong></td>
+                    <td>${formatPercentage(winRate)}</td>
+                    <td>${totalTrades}</td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-outline-primary btn-sm" onclick="configModel('${model.name}')" title="配置">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" onclick="viewModelDetails('${model.name}')" title="详情">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-${model.is_active ? 'warning' : 'success'} btn-sm" 
+                                    onclick="toggleModel('${model.name}', ${model.is_active})" 
+                                    title="${model.is_active ? '停用' : '启用'}">
+                                <i class="fas fa-${model.is_active ? 'pause' : 'play'}"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+    }
+    
+    // 更新模型详细信息
+    function updateModelsDetail(models) {
+        const container = document.getElementById('models-detail-container');
+        const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
+        
+        if (!models || models.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-info-circle text-muted"></i>
+                    <p class="mt-2 text-muted">暂无模型详细信息</p>
+                </div>
+            `;
+            return;
+        }
+        
+        if (viewMode === 'card') {
+            updateModelsCardView(models, container);
+        } else {
+            updateModelsTableView(models, container);
+        }
+    }
+    
+    // 卡片视图
+    function updateModelsCardView(models, container) {
+        let html = '<div class="row">';
+        
+        models.forEach(model => {
+            const performance = model.performance || {};
+            const totalReturn = performance.total_return || 0;
+            const returnClass = totalReturn >= 0 ? 'text-success' : 'text-danger';
+            const statusClass = model.is_active ? 'border-success' : 'border-secondary';
+            
+            html += `
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 ${statusClass}" style="border-width: 2px;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h6 class="card-title mb-0">
+                                    <i class="fas fa-robot me-2"></i>
+                                    ${model.name}
+                                </h6>
+                                <span class="badge ${model.is_active ? 'bg-success' : 'bg-secondary'}">
+                                    ${model.is_active ? '活跃' : '停用'}
+                                </span>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <small class="text-muted">总收益</small>
+                                <div class="h5 ${returnClass} mb-0">${formatCurrency(totalReturn)}</div>
+                            </div>
+                            
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="small text-muted">胜率</div>
+                                    <div class="fw-bold">${formatPercentage(performance.win_rate || 0)}</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="small text-muted">交易</div>
+                                    <div class="fw-bold">${performance.total_trades || 0}</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="small text-muted">夏普</div>
+                                    <div class="fw-bold">${(performance.sharpe_ratio || 0).toFixed(2)}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <button class="btn btn-outline-primary btn-sm me-1" onclick="configModel('${model.name}')">
+                                    <i class="fas fa-cog"></i> 配置
+                                </button>
+                                <button class="btn btn-outline-info btn-sm" onclick="viewModelDetails('${model.name}')">
+                                    <i class="fas fa-eye"></i> 详情
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+    }
+    
+    // 表格视图
+    function updateModelsTableView(models, container) {
+        let html = '<div class="table-responsive">';
+        html += '<table class="table table-striped table-hover">';
+        html += `
+            <thead class="table-dark">
+                <tr>
+                    <th>模型</th>
+                    <th>类型</th>
+                    <th>状态</th>
+                    <th>总收益</th>
+                    <th>胜率</th>
+                    <th>交易次数</th>
+                    <th>夏普比率</th>
+                    <th>最大回撤</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        models.forEach(model => {
+            const performance = model.performance || {};
+            const totalReturn = performance.total_return || 0;
+            const returnClass = totalReturn >= 0 ? 'text-success' : 'text-danger';
+            
+            html += `
+                <tr>
+                    <td><strong>${model.name}</strong></td>
+                    <td><span class="badge bg-info">AI</span></td>
+                    <td>
+                        <span class="badge ${model.is_active ? 'bg-success' : 'bg-secondary'}">
+                            ${model.is_active ? '活跃' : '停用'}
+                        </span>
+                    </td>
+                    <td class="${returnClass}"><strong>${formatCurrency(totalReturn)}</strong></td>
+                    <td>${formatPercentage(performance.win_rate || 0)}</td>
+                    <td>${performance.total_trades || 0}</td>
+                    <td>${(performance.sharpe_ratio || 0).toFixed(2)}</td>
+                    <td class="text-danger">${formatPercentage(performance.max_drawdown || 0)}</td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-outline-primary btn-sm" onclick="configModel('${model.name}')">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" onclick="viewModelDetails('${model.name}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+    }
+    
+    // 更新性能图表
+    function updatePerformanceChart(rankings) {
+        if (!rankings || rankings.length === 0) {
+            return;
+        }
+        
+        const labels = rankings.slice(0, 6).map(r => r.model_name);
+        const data = rankings.slice(0, 6).map(r => Math.abs(r.total_return));
+        
+        performanceChart.data.labels = labels;
+        performanceChart.data.datasets[0].data = data;
+        performanceChart.update();
+    }
+    
+    // 刷新模型数据
+    function refreshModels() {
+        loadModelsData();
+    }
+    
+    // 添加模型
+    function addModel() {
+        alert('添加模型功能开发中...');
+    }
+    
+    // 配置模型
+    function configModel(modelName) {
+        // 显示配置模态框
+        document.getElementById('modelName').value = modelName;
+        const modal = new bootstrap.Modal(document.getElementById('modelConfigModal'));
+        modal.show();
+    }
+    
+    // 查看模型详情
+    function viewModelDetails(modelName) {
+        alert(`查看 ${modelName} 详情功能开发中...`);
+    }
+    
+    // 切换模型状态
+    function toggleModel(modelName, currentStatus) {
+        const action = currentStatus ? '停用' : '启用';
+        if (confirm(`确定要${action}模型 ${modelName} 吗？`)) {
+            alert(`${action}模型功能开发中...`);
+        }
+    }
+    
+    // 保存模型配置
+    function saveModelConfig() {
+        const formData = {
+            modelName: document.getElementById('modelName').value,
+            apiKey: document.getElementById('apiKey').value,
+            maxTokens: document.getElementById('maxTokens').value,
+            temperature: document.getElementById('temperature').value,
+            enabled: document.getElementById('modelEnabled').checked
+        };
+        
+        console.log('保存模型配置:', formData);
+        alert('保存配置功能开发中...');
+        
+        // 关闭模态框
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modelConfigModal'));
+        modal.hide();
+    }
+    
+    // 视图模式切换
+    document.addEventListener('change', function(e) {
+        if (e.target.name === 'viewMode') {
+            const models = []; // 这里应该从缓存获取模型数据
+            updateModelsDetail(models);
+        }
+    });
+    
+    // WebSocket实时更新
+    socket.on('live_update', function(data) {
+        console.log('模型页面收到实时更新:', data);
+        
+        if (data.models_update) {
+            // 增量更新模型数据
+            loadModelsData();
+        }
+    });
+    
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化图表
+        initPerformanceChart();
+        
+        // 加载数据
+        loadModelsData();
+        
+        // 定期刷新数据
+        setInterval(loadModelsData, 60000); // 每分钟刷新一次
+    });
+</script>
+{% endblock %}

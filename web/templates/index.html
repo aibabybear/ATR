@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+
+{% block title %}AI Trading Robot - 首页{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- 欢迎区域 -->
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-body text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-robot" style="font-size: 4rem; color: var(--secondary-color);"></i>
+                </div>
+                <h1 class="display-4 mb-3">AI Trading Robot</h1>
+                <p class="lead mb-4">多AI模型自动交易系统 - 让人工智能为您的投资决策</p>
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <p class="text-muted">
+                            基于先进的人工智能技术，集成多个AI模型进行股票市场分析和自动交易。
+                            系统支持GPT、Claude等多种AI模型，通过竞争机制选出最优策略。
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <a href="/dashboard" class="btn btn-primary btn-custom btn-lg me-3">
+                        <i class="fas fa-tachometer-alt me-2"></i>
+                        进入仪表板
+                    </a>
+                    <a href="/models" class="btn btn-outline-secondary btn-custom btn-lg">
+                        <i class="fas fa-brain me-2"></i>
+                        查看AI模型
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 系统概览 -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    系统概览
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row" id="system-overview">
+                    <div class="col-md-3 mb-3">
+                        <div class="metric-card text-center">
+                            <div class="metric-value" id="active-models">-</div>
+                            <div class="metric-label">活跃模型</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="metric-card text-center" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                            <div class="metric-value" id="total-trades">-</div>
+                            <div class="metric-label">总交易次数</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="metric-card text-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <div class="metric-value" id="avg-return">-</div>
+                            <div class="metric-label">平均收益率</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="metric-card text-center" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <div class="metric-value" id="market-status">-</div>
+                            <div class="metric-label">市场状态</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 模型排行榜 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-trophy me-2"></i>
+                    AI模型排行榜
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="rankings-container">
+                    <div class="text-center py-4">
+                        <div class="loading-spinner"></div>
+                        <p class="mt-2 text-muted">加载排行榜数据...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 侧边栏 -->
+    <div class="col-lg-4">
+        <!-- 快速操作 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>
+                    快速操作
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success btn-custom" onclick="startTrading()">
+                        <i class="fas fa-play me-2"></i>
+                        启动交易
+                    </button>
+                    <button class="btn btn-warning btn-custom" onclick="pauseTrading()">
+                        <i class="fas fa-pause me-2"></i>
+                        暂停交易
+                    </button>
+                    <button class="btn btn-info btn-custom" onclick="refreshData()">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        刷新数据
+                    </button>
+                    <button class="btn btn-secondary btn-custom" onclick="exportData()">
+                        <i class="fas fa-download me-2"></i>
+                        导出数据
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 市场信息 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-globe me-2"></i>
+                    市场信息
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="market-info">
+                    <div class="text-center py-3">
+                        <div class="loading-spinner"></div>
+                        <p class="mt-2 text-muted">加载市场数据...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 系统日志 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-list-alt me-2"></i>
+                    系统日志
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="system-logs" style="height: 300px; overflow-y: auto;">
+                    <div class="text-center py-4">
+                        <i class="fas fa-info-circle text-muted"></i>
+                        <p class="mt-2 text-muted">等待系统日志...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 功能特性 -->
+<div class="row mt-5">
+    <div class="col-12">
+        <h2 class="text-center mb-5">核心功能特性</h2>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="fas fa-brain" style="font-size: 3rem; color: var(--primary-color);"></i>
+                </div>
+                <h5 class="card-title">多AI模型竞争</h5>
+                <p class="card-text">
+                    集成GPT、Claude等多种AI模型，通过竞争机制自动选择最优交易策略，
+                    确保投资决策的多样性和准确性。
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="fas fa-shield-alt" style="font-size: 3rem; color: var(--success-color);"></i>
+                </div>
+                <h5 class="card-title">智能风险管理</h5>
+                <p class="card-text">
+                    内置先进的风险管理系统，实时监控投资组合风险，
+                    自动设置止损止盈，保护您的投资安全。
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="fas fa-chart-area" style="font-size: 3rem; color: var(--info-color);"></i>
+                </div>
+                <h5 class="card-title">实时数据分析</h5>
+                <p class="card-text">
+                    整合多源市场数据，包括实时价格、新闻情绪、技术指标等，
+                    为AI模型提供全面的决策依据。
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 页面特定的JavaScript
+    let systemData = {};
+    
+    // 加载系统概览数据
+    async function loadSystemOverview() {
+        try {
+            const [statusData, performanceData] = await Promise.all([
+                apiRequest('/api/status'),
+                apiRequest('/api/performance')
+            ]);
+            
+            // 更新系统概览
+            document.getElementById('active-models').textContent = statusData.active_models || 0;
+            document.getElementById('total-trades').textContent = performanceData.total_trades || 0;
+            document.getElementById('avg-return').textContent = formatPercentage(performanceData.average_return || 0);
+            document.getElementById('market-status').textContent = statusData.market_open ? '开盘' : '休市';
+            
+            systemData = { ...statusData, ...performanceData };
+            
+        } catch (error) {
+            console.error('加载系统概览失败:', error);
+            showError('system-overview', '加载系统数据失败');
+        }
+    }
+    
+    // 加载排行榜数据
+    async function loadRankings() {
+        try {
+            const rankings = await apiRequest('/api/rankings');
+            
+            const container = document.getElementById('rankings-container');
+            
+            if (rankings.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-info-circle text-muted"></i>
+                        <p class="mt-2 text-muted">暂无AI模型数据</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '<div class="table-responsive">';
+            html += '<table class="table table-hover">';
+            html += `
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>AI模型</th>
+                        <th>总收益</th>
+                        <th>胜率</th>
+                        <th>交易次数</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+            
+            rankings.slice(0, 5).forEach((model, index) => {
+                const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
+                const returnClass = model.total_return >= 0 ? 'text-success' : 'text-danger';
+                const statusBadge = model.is_active ? 
+                    '<span class="badge bg-success">活跃</span>' : 
+                    '<span class="badge bg-secondary">停用</span>';
+                
+                html += `
+                    <tr>
+                        <td><span style="font-size: 1.2em;">${rankIcon}</span></td>
+                        <td><strong>${model.model_name}</strong></td>
+                        <td class="${returnClass}"><strong>${formatCurrency(model.total_return)}</strong></td>
+                        <td>${formatPercentage(model.win_rate)}</td>
+                        <td>${model.total_trades}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+            
+        } catch (error) {
+            console.error('加载排行榜失败:', error);
+            showError('rankings-container', '加载排行榜数据失败');
+        }
+    }
+    
+    // 加载市场信息
+    async function loadMarketInfo() {
+        try {
+            const marketData = await apiRequest('/api/market-data?symbols=QQQ,SPY,VIX');
+            
+            const container = document.getElementById('market-info');
+            let html = '';
+            
+            Object.entries(marketData).forEach(([symbol, data]) => {
+                const changeClass = data.change >= 0 ? 'text-success' : 'text-danger';
+                const changeIcon = data.change >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+                
+                html += `
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                        <div>
+                            <strong>${symbol}</strong>
+                            <div class="small text-muted">${data.source}</div>
+                        </div>
+                        <div class="text-end">
+                            <div><strong>$${data.price.toFixed(2)}</strong></div>
+                            <div class="small ${changeClass}">
+                                <i class="fas ${changeIcon}"></i>
+                                ${data.change_percent.toFixed(2)}%
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html || '<p class="text-muted">暂无市场数据</p>';
+            
+        } catch (error) {
+            console.error('加载市场信息失败:', error);
+            showError('market-info', '加载市场数据失败');
+        }
+    }
+    
+    // 快速操作函数
+    function startTrading() {
+        // 这里应该调用启动交易的API
+        alert('启动交易功能开发中...');
+    }
+    
+    function pauseTrading() {
+        // 这里应该调用暂停交易的API
+        alert('暂停交易功能开发中...');
+    }
+    
+    function refreshData() {
+        loadSystemOverview();
+        loadRankings();
+        loadMarketInfo();
+    }
+    
+    function exportData() {
+        // 这里应该实现数据导出功能
+        alert('数据导出功能开发中...');
+    }
+    
+    // WebSocket事件处理
+    socket.on('live_update', function(data) {
+        console.log('收到实时更新:', data);
+        
+        // 更新系统状态
+        if (data.system_status) {
+            const status = data.system_status;
+            document.getElementById('active-models').textContent = status.active_models;
+            document.getElementById('market-status').textContent = status.market_open ? '开盘' : '休市';
+        }
+        
+        // 更新排行榜
+        if (data.rankings) {
+            // 可以实现增量更新
+        }
+    });
+    
+    // 添加系统日志
+    function addSystemLog(message, type = 'info') {
+        const logsContainer = document.getElementById('system-logs');
+        const timestamp = new Date().toLocaleTimeString();
+        
+        const logEntry = document.createElement('div');
+        logEntry.className = `alert alert-${type} alert-custom py-2 mb-2`;
+        logEntry.innerHTML = `
+            <small class="text-muted">${timestamp}</small><br>
+            ${message}
+        `;
+        
+        logsContainer.insertBefore(logEntry, logsContainer.firstChild);
+        
+        // 限制日志数量
+        const logs = logsContainer.children;
+        if (logs.length > 10) {
+            logsContainer.removeChild(logs[logs.length - 1]);
+        }
+    }
+    
+    // 监听WebSocket事件并添加到日志
+    socket.on('status', function(data) {
+        addSystemLog(data.message, 'info');
+    });
+    
+    socket.on('error', function(data) {
+        addSystemLog(data.message, 'danger');
+    });
+    
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        loadSystemOverview();
+        loadRankings();
+        loadMarketInfo();
+        
+        // 定期刷新数据
+        setInterval(refreshData, 60000); // 每分钟刷新一次
+        
+        // 添加欢迎日志
+        setTimeout(() => {
+            addSystemLog('欢迎使用AI Trading Robot系统！', 'success');
+        }, 1000);
+    });
+</script>
+{% endblock %}
