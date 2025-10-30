@@ -342,7 +342,23 @@
     function updatePositions(positions) {
         const container = document.getElementById('positions-container');
         
-        if (!positions || positions.length === 0) {
+        // 确保positions是数组格式
+        let positionsArray = [];
+        if (Array.isArray(positions)) {
+            positionsArray = positions;
+        } else if (positions && typeof positions === 'object') {
+            // 如果是对象，尝试提取数组
+            if (positions.positions && Array.isArray(positions.positions)) {
+                positionsArray = positions.positions;
+            } else if (positions.data && Array.isArray(positions.data)) {
+                positionsArray = positions.data;
+            } else {
+                // 如果是单个对象，转换为数组
+                positionsArray = [positions];
+            }
+        }
+        
+        if (!positionsArray || positionsArray.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-4">
                     <i class="fas fa-info-circle text-muted"></i>
@@ -353,7 +369,7 @@
         }
         
         let html = '';
-        positions.slice(0, 8).forEach(position => {
+        positionsArray.slice(0, 8).forEach(position => {
             const pnlClass = position.unrealized_pnl >= 0 ? 'text-success' : 'text-danger';
             const pnlIcon = position.unrealized_pnl >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
             
@@ -381,7 +397,23 @@
     function updateRecentTrades(trades) {
         const container = document.getElementById('recent-trades-container');
         
-        if (!trades || trades.length === 0) {
+        // 确保trades是数组格式
+        let tradesArray = [];
+        if (Array.isArray(trades)) {
+            tradesArray = trades;
+        } else if (trades && typeof trades === 'object') {
+            // 如果是对象，尝试提取数组
+            if (trades.trades && Array.isArray(trades.trades)) {
+                tradesArray = trades.trades;
+            } else if (trades.data && Array.isArray(trades.data)) {
+                tradesArray = trades.data;
+            } else {
+                // 如果是单个对象，转换为数组
+                tradesArray = [trades];
+            }
+        }
+        
+        if (!tradesArray || tradesArray.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-4">
                     <i class="fas fa-info-circle text-muted"></i>
@@ -392,7 +424,7 @@
         }
         
         let html = '';
-        trades.slice(0, 5).forEach(trade => {
+        tradesArray.slice(0, 5).forEach(trade => {
             const actionClass = trade.action === 'buy' ? 'text-success' : 'text-danger';
             const actionIcon = trade.action === 'buy' ? 'fa-plus' : 'fa-minus';
             const actionText = trade.action === 'buy' ? '买入' : '卖出';
