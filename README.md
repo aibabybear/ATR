@@ -381,7 +381,7 @@ python3 -c "from core.trading_engine import TradingEngine; print('测试通过')
 如果您遇到问题或需要帮助：
 
 1. 查看 [FAQ](docs/FAQ.md)
-2. 提交 [Issue](https://github.com/your-repo/ATR/issues)
+2. 提交 [Issue](https://github.com/aibabybear/ATR/issues)
 3. 查看系统日志文件
 4. 运行系统诊断测试
 
